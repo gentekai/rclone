@@ -608,6 +608,8 @@ type ConfigInfo struct {
 	TPSLimit                   float64           `config:"tpslimit"`
 	TPSLimitBurst              int               `config:"tpslimit_burst"`
 	BindAddr                   net.IP            `config:"bind_addr"`
+	AuthAddr                   string			 `config:"auth_addr"`
+	RedirectURL                string			 `config:"redirect_url"`
 	DisableFeatures            []string          `config:"disable"`
 	UserAgent                  string            `config:"user_agent"`
 	Immutable                  bool              `config:"immutable"`

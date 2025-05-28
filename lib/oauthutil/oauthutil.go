@@ -770,6 +770,9 @@ version recommended):
 				if err != nil {
 					return nil, fmt.Errorf("config failed to refresh token: %w", err)
 				}
+				if code == "" {
+					return fs.ConfigGoto(newState("*oauth-done"))
+				}
 			}
 			err = configExchange(ctx, name, m, oauthConfig, code)
 			if err != nil {
@@ -863,6 +866,17 @@ func configSetup(ctx context.Context, id, name string, m configmap.Mapper, oauth
 	authorizeNoAutoBrowserValue, ok := m.Get(config.ConfigAuthNoBrowser)
 	authorizeNoAutoBrowser := ok && authorizeNoAutoBrowserValue != ""
 
+	authorizeNoAutoWebserverValue, ok := m.Get(config.ConfigAuthNoWebserver)
+	authorizeNoAutoWebserver := ok && authorizeNoAutoWebserverValue != ""
+
+	webServerResponseValue, ok := m.Get(config.ConfigWebServerResponse)
+	webServerResponse := ok && webServerResponseValue != ""
+
+	if webServerResponse {
+		fs.Logf(nil, "Returning with Authcode: %s\n", webServerResponseValue)
+		return webServerResponseValue, nil
+	}
+
 	authURL, state, err := getAuthURL(name, m, oauthConfig, opt)
 	if err != nil {
 		return "", err
@@ -871,12 +885,14 @@ func configSetup(ctx context.Context, id, name string, m configmap.Mapper, oauth
 	// Prepare webserver
 	fmt.Println("AuthServer: ", bindAddress, ", ", authURL)
 	server := newAuthServer(opt, bindAddress, state, authURL)
-	err = server.Init()
-	if err != nil {
-		return "", fmt.Errorf("failed to start auth webserver: %w", err)
+	if !authorizeNoAutoWebserver {
+		err = server.Init()
+		if err != nil {
+			return "", fmt.Errorf("failed to start auth webserver: %w", err)
+		}
+		go server.Serve()
+		defer server.Stop()
 	}
-	go server.Serve()
-	defer server.Stop()
 
 	authRedirectURL := oauthConfig.RedirectURL + "/auth?state=" + state
 	fmt.Println("authRedirectURL: ", authRedirectURL)
@@ -895,19 +911,24 @@ func configSetup(ctx context.Context, id, name string, m configmap.Mapper, oauth
 	fs.Logf(nil, "Log in and authorize rclone for access\n")
 
 	// Read the code via the webserver
-	fs.Logf(nil, "Waiting for code...\n")
-	auth := <-server.result
-	if !auth.OK || auth.Code == "" {
-		return "", auth
-	}
-	fs.Logf(nil, "Got code\n")
-	if opt.CheckAuth != nil {
-		err = opt.CheckAuth(oauthConfig, auth)
-		if err != nil {
-			return "", err
+	if !authorizeNoAutoWebserver {
+		fs.Logf(nil, "Waiting for code...\n")
+		auth := <-server.result
+		fs.Logf(nil, "Server.result: %s\n", auth)
+		if !auth.OK || auth.Code == "" {
+			return "", auth
 		}
+		fs.Logf(nil, "Got code: %s\n", auth)
+		if opt.CheckAuth != nil {
+			err = opt.CheckAuth(oauthConfig, auth)
+			if err != nil {
+				return "", err
+			}
+		}
+
+		return auth.Code, nil
 	}
-	return auth.Code, nil
+	return "", nil
 }
 
 // Exchange the code for a token
@@ -975,6 +996,8 @@ func (s *authServer) handleAuth(w http.ResponseWriter, req *http.Request) {
 		})
 		return
 	}
+
+	fs.Logf(nil, "handleAuth has: %s, %s\n", req.Form.Get("code"), req.Form.Get("state"))
 
 	// get code, error if empty
 	code := req.Form.Get("code")

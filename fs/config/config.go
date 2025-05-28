@@ -61,6 +61,12 @@ const (
 	// ConfigAuthNoBrowser indicates that we do not want to open browser
 	ConfigAuthNoBrowser = "config_auth_no_browser"
 
+	// ConfigAuthNoWebserver indicates that we do not want to start a webserver
+	ConfigAuthNoWebserver = "config_auth_no_webserver"
+
+	// ConfigTemplate is the template content to be used in the authorization webserver
+	ConfigWebServerResponse = "config_web_server_response"
+
 	// ConfigTemplate is the template content to be used in the authorization webserver
 	ConfigTemplate = "config_template"
 

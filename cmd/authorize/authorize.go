@@ -11,14 +11,18 @@ import (
 )
 
 var (
-	noAutoBrowser bool
-	template      string
+	noAutoBrowser     bool
+	noAutoWebserver   bool
+	webServerResponse string
+	template          string
 )
 
 func init() {
 	cmd.Root.AddCommand(commandDefinition)
 	cmdFlags := commandDefinition.Flags()
 	flags.BoolVarP(cmdFlags, &noAutoBrowser, "auth-no-open-browser", "", false, "Do not automatically open auth link in default browser", "")
+	flags.BoolVarP(cmdFlags, &noAutoWebserver, "auth-no-start-webserver", "", false, "Do not automatically start a webserver for the redirect url", "")
+	flags.StringVarP(cmdFlags, &webServerResponse, "web-server-response", "", "", "The webserver response from the external server.", "")
 	flags.StringVarP(cmdFlags, &template, "template", "", "", "The path to a custom Go template for generating HTML responses", "")
 }
 
@@ -43,6 +47,6 @@ Use --template to generate HTML output via a custom Go template. If a blank stri
 	},
 	RunE: func(command *cobra.Command, args []string) error {
 		cmd.CheckArgs(1, 3, command, args)
-		return config.Authorize(context.Background(), args, noAutoBrowser, template)
+		return config.Authorize(context.Background(), args, noAutoBrowser, noAutoWebserver, webServerResponse, template)
 	},
 }

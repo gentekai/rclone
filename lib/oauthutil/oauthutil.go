@@ -883,7 +883,8 @@ func configSetup(ctx context.Context, id, name string, m configmap.Mapper, oauth
 	}
 
 	// Prepare webserver
-	fmt.Println("AuthServer: ", bindAddress, ", ", authURL)
+	fmt.Println("AuthServer=", authURL)
+	fmt.Println("AuthState=", state)
 	server := newAuthServer(opt, bindAddress, state, authURL)
 	if !authorizeNoAutoWebserver {
 		err = server.Init()
@@ -892,6 +893,8 @@ func configSetup(ctx context.Context, id, name string, m configmap.Mapper, oauth
 		}
 		go server.Serve()
 		defer server.Stop()
+	} else {
+		return "", nil
 	}
 
 	authRedirectURL := oauthConfig.RedirectURL + "/auth?state=" + state

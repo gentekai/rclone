@@ -1,0 +1,79 @@
+name: Build and Publish Packages
+
+on:
+  push:
+    branches:
+      - feat_PR-7635
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [debian, alpine]
+        arch: [amd64, arm64]
+    env:
+      VERSION_FILE: VERSION
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '>=1.21'
+
+      - name: Read version and generate full version tag
+        id: version
+        run: |
+          VERSION=$(cat $VERSION_FILE)
+          REF=${GITHUB_REF##*/}
+          echo "FULL_VERSION=${VERSION}-${REF}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Set target vars
+        id: vars
+        run: |
+          if [[ "${{ matrix.arch }}" == "amd64" ]]; then GOARCH=amd64; else GOARCH=arm64; fi
+          echo "GOARCH=$GOARCH" >> $GITHUB_OUTPUT
+          echo "PACKAGE_NAME=rclone_${{ steps.version.outputs.FULL_VERSION }}_${GOARCH}" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Build binary
+        run: |
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ steps.vars.outputs.GOARCH }} go build -o ${{ steps.vars.outputs.PACKAGE_NAME }}
+        shell: bash
+
+      - name: Package binary
+        run: |
+          mkdir -p pkg/DEBIAN pkg/usr/local/bin
+          cp ${{ steps.vars.outputs.PACKAGE_NAME }} pkg/usr/local/bin/rclone
+          chmod 755 pkg/usr/local/bin/rclone
+          echo "Package: rclone
+Version: ${{ steps.version.outputs.FULL_VERSION }}
+Architecture: ${{ matrix.arch }}
+Maintainer: example@example.com
+Description: My Go App" > pkg/DEBIAN/control
+
+          if [[ "${{ matrix.os }}" == "debian" ]]; then
+            dpkg-deb --build pkg ${{ steps.vars.outputs.PACKAGE_NAME }}.deb
+          else
+            mkdir -p pkg-alpine/usr/bin
+            cp ${{ steps.vars.outputs.PACKAGE_NAME }} pkg-alpine/usr/bin/rclone
+            tar -czf ${{ steps.vars.outputs.PACKAGE_NAME }}.apk.tar.gz -C pkg-alpine .
+            mv ${{ steps.vars.outputs.PACKAGE_NAME }}.apk.tar.gz ${{ steps.vars.outputs.PACKAGE_NAME }}.apk
+          fi
+        shell: bash
+
+      # - name: Upload to Nexus
+      #   run: |
+      #     if [[ "${{ matrix.os }}" == "debian" ]]; then
+      #       curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+      #         --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.deb \
+      #         "${{ vars.NEXUS_APT_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.deb"
+      #     else
+      #       curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+      #         --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
+      #         "${{ vars.NEXUS_RAW_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
+      #     fi
+      #   shell: bash

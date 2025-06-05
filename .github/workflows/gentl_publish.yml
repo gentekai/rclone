@@ -65,15 +65,22 @@ jobs:
           fi
         shell: bash
 
-      - name: Upload to Nexus
-        run: |
-          if [[ "${{ matrix.os }}" == "debian" ]]; then
-            curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
-              --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.deb \
-              "${{ vars.NEXUS_APT_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.deb"
-          else
-            curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
-              --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
-              "${{ vars.NEXUS_RAW_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
-          fi
+      - name: Upload to Nexus (Alpine only)
+        run: |          
+          curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+            --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
+            "${{ vars.NEXUS_RAW_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"          
         shell: bash
+
+      # - name: Upload to Nexus
+      #   run: |
+      #     if [[ "${{ matrix.os }}" == "debian" ]]; then
+      #       curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+      #         --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.deb \
+      #         "${{ vars.NEXUS_APT_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.deb"
+      #     else
+      #       curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+      #         --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
+      #         "${{ vars.NEXUS_RAW_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
+      #     fi
+      #   shell: bash

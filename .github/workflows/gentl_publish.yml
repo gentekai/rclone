@@ -76,6 +76,6 @@ jobs:
           else
             curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
               --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
-              "${{ vars.NEXUS_RAW_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
+              "https://nexus.gentek.ai/apps/nexus/repository/gentl-raw/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
           fi
         shell: bash

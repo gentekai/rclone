@@ -28,7 +28,7 @@ jobs:
       - name: Read version and generate full version tag
         id: version
         run: |
-          VERSION=$(cat $VERSION_FILE)
+          VERSION=$(cat $VERSION_FILE | tr -d [a-zA-Z])
           REF=${GITHUB_REF##*/}
           echo "FULL_VERSION=${VERSION}-${REF}" >> $GITHUB_OUTPUT
         shell: bash
@@ -38,44 +38,44 @@ jobs:
         run: |
           if [[ "${{ matrix.arch }}" == "amd64" ]]; then GOARCH=amd64; else GOARCH=arm64; fi
           echo "GOARCH=$GOARCH" >> $GITHUB_OUTPUT
+          echo "BINARY_NAME=rclone" >> $GITHUB_OUTPUT
           echo "PACKAGE_NAME=rclone_${{ steps.version.outputs.FULL_VERSION }}_${GOARCH}" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Build binary
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=${{ steps.vars.outputs.GOARCH }} go build -o ${{ steps.vars.outputs.PACKAGE_NAME }}
+          CGO_ENABLED=0 GOOS=linux GOARCH=${{ steps.vars.outputs.GOARCH }} go build -o ${{ steps.vars.outputs.BINARY_NAME }}
+          chmod 755 ${{ steps.vars.outputs.BINARY_NAME }}
         shell: bash
 
       - name: Package binary
         run: |
-          mkdir -p pkg/DEBIAN pkg/usr/local/bin
-          cp ${{ steps.vars.outputs.PACKAGE_NAME }} pkg/usr/local/bin/rclone
-          chmod 755 pkg/usr/local/bin/rclone
-          echo "Package: rclone
+          mkdir -p pkg/DEBIAN pkg/usr/bin
+          cp ${{ steps.vars.outputs.BINARY_NAME }} pkg/usr/bin/
+          echo "Package: ${{ steps.vars.outputs.BINARY_NAME }}
           Version: ${{ steps.version.outputs.FULL_VERSION }}
           Architecture: ${{ matrix.arch }}
-          Maintainer: example@example.com
-          Description: My Go App" > pkg/DEBIAN/control
+          Maintainer: maintainers@gentek.ai
+          Description: ${{ steps.vars.outputs.BINARY_NAME }} " > pkg/DEBIAN/control
 
           if [[ "${{ matrix.os }}" == "debian" ]]; then
             dpkg-deb --build pkg ${{ steps.vars.outputs.PACKAGE_NAME }}.deb
           else
             mkdir -p pkg-alpine/usr/bin
-            cp ${{ steps.vars.outputs.PACKAGE_NAME }} pkg-alpine/usr/bin/rclone
-            tar -czf ${{ steps.vars.outputs.PACKAGE_NAME }}.apk.tar.gz -C pkg-alpine .
-            mv ${{ steps.vars.outputs.PACKAGE_NAME }}.apk.tar.gz ${{ steps.vars.outputs.PACKAGE_NAME }}.apk
+            cp ${{ steps.vars.outputs.BINARY_NAME }} pkg-alpine/usr/bin/
+            tar -czf ${{ steps.vars.outputs.PACKAGE_NAME }}.apk -C pkg-alpine .
           fi
         shell: bash
 
       - name: Upload to Nexus
         run: |
           if [[ "${{ matrix.os }}" == "debian" ]]; then
-            curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+            curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
               --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.deb \
               "${{ vars.NEXUS_APT_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.deb"
           else
-            curl -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+            curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
               --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
-              "https://nexus.gentek.ai/apps/nexus/repository/gentl-raw/rclone/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
+              -p /${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
           fi
         shell: bash

@@ -46,7 +46,7 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=${{ steps.vars.outputs.GOARCH }} go build -o ${{ steps.vars.outputs.BINARY_NAME }}
           chmod 755 ${{ steps.vars.outputs.BINARY_NAME }}
-          cp ${{ steps.vars.outputs.GOARCH }} ${{ steps.vars.outputs.PACKAGE_NAME }}
+          cp ${{ steps.vars.outputs.BINARY_NAME }} ${{ steps.vars.outputs.PACKAGE_NAME }}
         shell: bash
 
       - name: Package binary

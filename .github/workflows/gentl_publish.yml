@@ -11,9 +11,9 @@ jobs:
     strategy:
       matrix:
         # os: [debian, alpine]
-        # arch: [amd64, arm64]
+        arch: [amd64, arm64]
         os: [alpine]
-        arch: [amd64]
+        # arch: [amd64]
     env:
       VERSION_FILE: VERSION
     steps:

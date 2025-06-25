@@ -46,6 +46,7 @@ jobs:
         run: |
           CGO_ENABLED=0 GOOS=linux GOARCH=${{ steps.vars.outputs.GOARCH }} go build -o ${{ steps.vars.outputs.BINARY_NAME }}
           chmod 755 ${{ steps.vars.outputs.BINARY_NAME }}
+          cp ${{ steps.vars.outputs.GOARCH }} ${{ steps.vars.outputs.PACKAGE_NAME }}
         shell: bash
 
       - name: Package binary
@@ -61,21 +62,27 @@ jobs:
           if [[ "${{ matrix.os }}" == "debian" ]]; then
             dpkg-deb --build pkg ${{ steps.vars.outputs.PACKAGE_NAME }}.deb
           else
-            mkdir -p pkg-alpine/usr/bin
-            cp ${{ steps.vars.outputs.BINARY_NAME }} pkg-alpine/usr/bin/
-            tar -czf ${{ steps.vars.outputs.PACKAGE_NAME }}.apk -C pkg-alpine .
+            echo "Not building alpine - the script below is incorrect"
+            # mkdir -p pkg-alpine/usr/bin
+            # cp ${{ steps.vars.outputs.BINARY_NAME }} pkg-alpine/usr/bin/
+            # tar -czf ${{ steps.vars.outputs.PACKAGE_NAME }}.apk -C pkg-alpine .
           fi
         shell: bash
 
       - name: Upload to Nexus
         run: |
           if [[ "${{ matrix.os }}" == "debian" ]]; then
-            curl -v -u ${{ secrets.NEXUS_USR }}:${{ secrets.NEXUS_PWD }} \
-              --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.deb \
+            # The curl command is not quite right 
+            curl -u ${{ secrets.NEXUS_USR }}:${{ secrets.NEXUS_PWD }} \
+               -H "Content-Type: multipart/form-data" \
+               --data-binary "@${{ steps.vars.outputs.PACKAGE_NAME }}.deb" \
               "${{ vars.NEXUS_APT_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.deb"
           else
             curl -v -u ${{ secrets.NEXUS_USR }}:${{ secrets.NEXUS_PWD }} \
-              --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
-              "https://nexus.gentek.ai/apps/nexus/repository/gentl-raw/rclone/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
+              --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }} \
+              "https://nexus.gentek.ai/apps/nexus/repository/gentl-raw/rclone/${{ steps.vars.outputs.PACKAGE_NAME }}"
+            # curl -v -u ${{ secrets.NEXUS_USR }}:${{ secrets.NEXUS_PWD }} \
+            #   --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
+            #   "https://nexus.gentek.ai/apps/nexus/repository/gentl-raw/rclone/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
           fi
         shell: bash

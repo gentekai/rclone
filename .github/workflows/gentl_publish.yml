@@ -76,6 +76,6 @@ jobs:
           else
             curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
               --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
-              -p /${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
+              "${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
           fi
         shell: bash

@@ -70,11 +70,11 @@ jobs:
       - name: Upload to Nexus
         run: |
           if [[ "${{ matrix.os }}" == "debian" ]]; then
-            curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+            curl -v -u ${{ secrets.NEXUS_USR }}:${{ secrets.NEXUS_PWD }} \
               --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.deb \
               "${{ vars.NEXUS_APT_REPOSITORY }}/${{ steps.vars.outputs.PACKAGE_NAME }}.deb"
           else
-            curl -v -u ${{ secrets.NEXUS_USER }}:${{ secrets.NEXUS_SECRET }} \
+            curl -v -u ${{ secrets.NEXUS_USR }}:${{ secrets.NEXUS_PWD }} \
               --upload-file ${{ steps.vars.outputs.PACKAGE_NAME }}.apk \
               "https://nexus.gentek.ai/apps/nexus/repository/gentl-raw/rclone/${{ steps.vars.outputs.PACKAGE_NAME }}.apk"
           fi
